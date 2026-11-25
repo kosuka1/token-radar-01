@@ -29,6 +29,7 @@
   }
   function fmtMult(n) { return '×' + n.toFixed(3); }
   function fmtFactor(n) { return '×' + n.toFixed(2); }
+  function fmtErr(e) { return e === null || e === undefined ? '—' : '×' + Math.exp(e).toFixed(2); }
 
   /* ---------- tiny DOM helper: every data string goes in as text, never as markup ---------- */
   function el(tag, attrs) {
@@ -142,7 +143,7 @@
     }
     return el('section', { 'class': 'model-box' },
       el('h2', { text: 'How a value is measured' }),
-      el('p', { text: 'The multiple is measured, not picked: for each category, the protocols in this same snapshot whose token already trades give a market cap over TVL; the category’s multiple is that median, shrunk toward the market median by n/(n+6) traded peers and clamped to [×0.03, ×1.50], so one outlier cannot set a price. Growth saturates, so one hot week cannot double a value; maturity rewards a token-free track record and flattens after about three years; breadth credits each extra chain a token would launch into. No protocol’s name is ever an input.' }),
+      el('p', { text: 'The multiple is measured, not picked: for each category, the protocols in this same snapshot whose token already trades give a market cap over TVL; the category’s multiple is that median, shrunk toward the market median by n/(n+6) traded peers and clamped to [×0.03, ×1.50], so one outlier cannot set a price. Growth saturates, so one hot week cannot double a value; maturity rewards a token-free track record and flattens after about three years; breadth credits each extra chain a token would launch into. No protocol’s name is ever an input. Radar-3 checks the multiple itself: every category’s multiple is also fitted on one half of its traded peers and tested on the other, and the held-out error is printed beside it in the table below. Each farm plan is priced in gas on the protocol’s cheapest listed chain, and each detail view shows the plan’s total.' }),
       el('div', { 'class': 'formula', text: 'implied value  =  TVL  ×  category multiple (measured, shrunk)  ×  growth factor  ×  maturity factor  ×  breadth factor' }),
       el('div', { 'class': 'sandbox' },
         field('Shrinkage k', 'shrink_k', '1'),
@@ -237,6 +238,12 @@
     if (!r) return el('span', null);
     var v = state.sb ? impliedWith(r, state.sb, multiplesWith(state.sb.shrink_k)) : { implied: r.implied_value_usd, mult: r.category_multiple, growth: r.growth_factor, maturity: r.maturity_factor, breadth: r.breadth_factor };
     var peers = r.category_peers === 0 ? 'no traded peers — priced at the market median' : r.category_peers + ' traded peer' + (r.category_peers === 1 ? '' : 's') + ' in this snapshot';
+    var oddsText = r.token_odds === null || r.token_odds === undefined
+      ? 'too few comparable protocols to read'
+      : r.odds_traded + ' of ' + r.odds_total + ' comparable protocols in ' + (r.category || 'Uncategorised') + ' already record a token (' + Math.round(r.token_odds * 100) + '%)';
+    var oddsBar = (r.token_odds === null || r.token_odds === undefined) ? null :
+      el('div', { 'class': 'oddsbar' }, el('div', { 'class': 'oddsfill', style: 'width:' + Math.round(r.token_odds * 100) + '%' }));
+    var plan = r.farm_plan_total;
     return el('aside', { 'class': 'detail' },
       el('div', { 'class': 'detail-head' },
         el('div', null,
@@ -249,10 +256,13 @@
       el('dl', { 'class': 'facts' },
         el('div', null, el('dt', { text: 'Category' }), el('dd', { text: r.category || 'Uncategorised' })),
         el('div', null, el('dt', { text: 'Category multiple' }), el('dd', { text: fmtMult(r.category_multiple) + ' (' + peers + ')' })),
+        el('div', null, el('dt', { text: 'Held-out error, category' }), el('dd', { text: fmtErr(r.heldout_err) + (r.heldout_err === null ? ' — too few peers to split' : ' median error on the half the multiple was not fitted on') })),
+        el('div', null, el('dt', { text: 'Token odds (base rate)' }), el('dd', null, el('div', { text: oddsText }), oddsBar, el('div', { 'class': 'oddsnote', text: 'A base rate among comparable protocols in this snapshot — not a prediction this protocol will issue one.' }))),
         el('div', null, el('dt', { text: 'TVL change, 7d' }), el('dd', { text: r.change_7d === null ? 'not reported — read as flat' : fmtPct(r.change_7d) })),
         el('div', null, el('dt', { text: 'Token-free track record' }), el('dd', { text: r.age_days === null ? 'no listing date — read at the median age, ' + fmtAge(DATA.median_age_days) : fmtAge(r.age_days) + ' (tracked since ' + r.listed_at + ')' })),
         el('div', null, el('dt', { text: 'Chains' }), el('dd', { text: r.chains.length ? r.chains.join(', ') : 'none recorded' })),
-        el('div', null, el('dt', { text: 'Implied value' }), el('dd', { text: fmtUsd(r.implied_value_usd) }))),
+        el('div', null, el('dt', { text: 'Implied value' }), el('dd', { text: fmtUsd(r.implied_value_usd) })),
+        el('div', null, el('dt', { text: 'Farm plan total' }), el('dd', { text: plan ? ('about $' + plan.gas_usd.toFixed(2) + ' gas · ' + plan.active_minutes + ' min active over ' + plan.hold_days + ' days') : '—' }))),
       el('h4', { text: 'Farm plan' }),
       el('ol', { 'class': 'steps' }, r.farm_steps.map(function (s) { return el('li', { text: s }); })));
   }
@@ -283,16 +293,23 @@
         el('td', { text: c.category }),
         el('td', { 'class': 'num', text: String(c.peers) }),
         el('td', { 'class': 'num', text: c.raw_median === null ? '—' : '×' + c.raw_median.toFixed(3) }),
-        el('td', { 'class': 'num impl', text: '×' + c.multiple.toFixed(3) }));
+        el('td', { 'class': 'num impl', text: '×' + c.multiple.toFixed(3) }),
+        el('td', { 'class': 'num', text: c.heldout_n === null ? '—' : String(c.heldout_n) }),
+        el('td', { 'class': 'num', text: fmtErr(c.heldout_err) }));
     });
+    var holdoutLine = DATA.global_heldout_err === null
+      ? 'No category had enough traded peers to run the held-out check.'
+      : 'Held out, not fitted: each multiple above was also fitted on one half of its category’s traded peers (alternating by slug, so the split is the same every run) and tested on the other half. Pooled over ' + DATA.global_heldout_n + ' held-out peers, the median error is ' + fmtErr(DATA.global_heldout_err) + ' — a multiple that misses the typical peer’s market cap by that factor. The board itself still prices with the full-peer multiple; the holdout is the check that the multiple earns its place.';
     return el('section', { 'class': 'method-wrap' },
       el('p', { text: 'One snapshot, sealed: ' + DATA.source + '. It carries ' + DATA.protocols_count + ' protocols at or above $5M of TVL; ' + DATA.pretoken_count + ' record no token. The board ranks ' + DATA.board_size + ' of those — every one of the ' + DATA.watchlist_size + ' on the watchlist (TVL at or above the $50M floor, no token, not a wrapped, staked or bridged product of one that trades), plus the ' + DATA.early_size + ' strongest below that floor.' }),
       el('p', { text: 'Shrinkage is the honest part. A category with fifteen traded peers (lending) is priced almost entirely by its own kind; a category with one is priced almost entirely by the market median, ×' + DATA.global_multiple.toFixed(3) + '. The raw median is printed beside the shrunk multiple so the reader can see exactly how far each category was pulled, and a category with no traded peers at all is priced at the market median and says so in its detail view.' }),
+      el('p', { text: holdoutLine }),
       el('table', { 'class': 'calib' },
-        el('thead', null, el('tr', null, ['Category', 'Traded peers', 'Raw median mcap / TVL', 'Multiple used'].map(function (h, i) {
+        el('thead', null, el('tr', null, ['Category', 'Traded peers', 'Raw median mcap / TVL', 'Multiple used', 'Holdout peers', 'Holdout error'].map(function (h, i) {
           return el('th', { 'class': i >= 1 ? 'num' : null, text: h });
         }))),
         el('tbody', null, rows)),
+      el('p', { text: 'Token odds are a base rate, not a forecast: for each category, the share of its comparable protocols (traded plus pre-token, exchanges excluded) that already record a token. A category with fewer than five comparable protocols shows no odds at all. Farm gas is priced from stated bands, not live quotes: Ethereum about $3.00 a transaction, BNB Chain, Avalanche, Bitcoin and Tron about $0.30, the cheap L2s and Solana about $0.08, everything else about $0.25 — each plan uses its protocol’s cheapest listed chain, and its detail view totals the gas.' }),
       el('p', { text: 'What the model refuses to do: use a protocol’s name, guess at a launch date, or import a figure the snapshot does not carry. Where the snapshot is silent — a missing seven-day change, a missing listing date — the model reads the neutral value and the detail view says so.' }));
   }
 
