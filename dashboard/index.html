@@ -1,14 +1,35 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Token Radar — pre-token protocols ranked by implied value (model radar-2)</title>
+<title>Token Launch Radar</title>
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<a class="skip" href="#board">Skip to the board</a>
-<main id="board" tabindex="-1" aria-busy="true"></main>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <div>
+      <h1>Token Launch Radar</h1>
+      <p class="tagline">Pre-token protocols ranked by implied launch value, each with a costed farm plan.</p>
+    </div>
+  </div>
+  <div class="top-meta" id="top-meta"></div>
+</header>
+
+<nav class="tabs" aria-label="Views">
+  <button type="button" class="tab" data-view="board">Board</button>
+  <button type="button" class="tab" data-view="live">Already trading</button>
+  <button type="button" class="tab" data-view="method">Method</button>
+</nav>
+
+<main id="view" class="view"></main>
+
+<footer class="foot">
+  <p>Implied value is this radar's own claim, derived from the sealed snapshot's figures; it is not a prediction that a token will be issued. A protocol "records no token" when the snapshot carries no market cap, gecko id or symbol for it.</p>
+</footer>
+
 <script src="../data.js"></script>
 <script src="app.js"></script>
 </body>

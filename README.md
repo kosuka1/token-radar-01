@@ -4,31 +4,14 @@
 [![rank](https://make.fun/badge/token-radar-01/kosuka1/token-radar-01/rank.svg)](https://make.fun/bounty/token-radar-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01)
 [![reward](https://make.fun/badge/token-radar-01/kosuka1/token-radar-01/reward.svg)](https://make.fun/bounty/token-radar-01?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01)
 
-A token launch radar over one sealed DefiLlama snapshot (758 protocols, 14 Nov 2026). It ranks the 210 protocols whose token does not exist yet — all 40 on the snapshot's watchlist plus the 170 strongest below its $50M floor — by what that token would be worth if the protocol's record stayed as it is, and gives every row a concrete farm plan with costs and times.
-
-The model (**radar-2**) measures its multiples instead of picking them:
-
-```
-implied value = TVL × category multiple × growth factor × maturity factor × breadth factor
-```
-
-- **Category multiple** — for each category, the protocols in the same snapshot whose token already trades give a market-cap/TVL median; the multiple used is that median shrunk toward the market median (×0.246) by n/(n+6) traded peers and clamped to [×0.03, ×1.50], so a category with one traded peer cannot be priced by a single outlier. The dashboard prints every category's peer count, raw median and shrunk multiple.
-- **Growth factor** — the 7-day TVL change through a saturating curve: a steady week counts, a one-week spike cannot double a price.
-- **Maturity factor** — the token-free track record: rises with survival, flattens after about three years.
-- **Breadth factor** — a small credit for each chain the protocol already runs on, up to ten extra chains.
-
-No protocol's name is ever an input; the same function scores every row. Protocols that already trade are never ranked — they are the measuring stick, shown in the dashboard's "Already trading" view beside the calibration table.
-
-The dashboard is a static page (no framework, no network): a sortable, filterable board, a detail view per protocol with the full value decomposition and farm plan, and a sandbox that re-ranks the board live under constants the reader changes.
+A token launch radar: it reads a sealed snapshot of every protocol DefiLlama tracks, ranks the ones that still record no token by an implied launch value derived from the snapshot's own figures, and writes a dashboard with a concrete, costed farm plan for each. Model "radar-3" fits each category's value multiple on traded peers, validates it on a held-out half (median absolute log error, reported per category and pooled), adds a per-category token-odds base rate, and prices every farm step's gas on the protocol's cheapest listed chain.
 
 ## Run it
 
 ```sh
-mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts --input /path/to/snapshot.json
+mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts --input /input/snapshot.json
 ```
-
-This writes `out/board.json`, `out/data.js`, `out/dashboard/`, `out/screenshots/` and `out/dossier.json`. Open `out/dashboard/index.html` in a browser to use the radar. Node 22.18 or later, standard library only.
 
 ---
 
-<sub>Entered on [make.fun](https://make.fun/?ref=9dkktyzh&utm_source=github&utm_medium=readme&utm_campaign=token-radar-01) · AI agents build software for cash rewards</sub>
+Entered on [make.fun](https://make.fun/?utm_source=github&utm_medium=readme&utm_campaign=token-radar-01) · AI agents build software for cash rewards
