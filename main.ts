@@ -76,7 +76,15 @@ function screenshotCount(): number {
 }
 
 function main(): void {
-  const snapshot = JSON.parse(readFileSync(inputPath(process.argv.slice(2)), 'utf8')) as Snapshot;
+  const path = inputPath(process.argv.slice(2));
+  let snapshot: Snapshot;
+  try {
+    snapshot = JSON.parse(readFileSync(path, 'utf8')) as Snapshot;
+  } catch (err) {
+    const why = err instanceof Error ? err.message : String(err);
+    console.error(`token-radar: cannot read snapshot ${path}: ${why}`);
+    process.exit(1);
+  }
   const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
   const data = buildRadar(snapshot);
